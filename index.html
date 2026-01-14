@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Council of Experts | Agentic Workflow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f1f5f9;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .agent-card {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .agent-card.active {
+            transform: translateY(-4px);
+            border-color: rgba(59, 130, 246, 0.5);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        .markdown-content h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; color: #60a5fa; }
+        .markdown-content h2 { font-size: 1.25rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; color: #93c5fd; border-bottom: 1px solid #334155; padding-bottom: 0.5rem; }
+        .markdown-content p { margin-bottom: 1rem; line-height: 1.6; }
+        .markdown-content ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+            <div>
+                <h1 class="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-500 bg-clip-text text-transparent">
+                    Council of Experts
+                </h1>
+                <p class="text-slate-400 text-sm mt-1 flex items-center gap-2">
+                    <span class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 text-xs font-bold uppercase tracking-wider border border-blue-500/20">Mixture of Agents</span>
+                    <span>Persona-Based Reasoning Pipeline</span>
+                </p>
+            </div>
+            <div class="flex items-center gap-3">
+                <div id="connectionStatus" class="flex items-center gap-2 text-xs font-medium text-green-400">
+                    <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                    System Online
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Input -->
+        <div class="glass-panel rounded-2xl p-6 mb-8">
+            <div class="flex flex-col gap-4">
+                <div class="relative">
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 block">Universal Objective</label>
+                    <textarea id="userQuery" rows="3" 
+                        class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition resize-none text-slate-200 placeholder-slate-600"
+                        placeholder="Provide a complex problem for the council to resolve..."></textarea>
+                </div>
+                <div class="flex justify-between items-center">
+                    <div class="flex gap-4">
+                        <div class="text-[10px] text-slate-500 uppercase tracking-tighter leading-tight">
+                            Experts<br><span class="text-slate-300 font-mono">gemini-2.0-flash-exp</span>
+                        </div>
+                        <div class="text-[10px] text-slate-500 uppercase tracking-tighter leading-tight">
+                            Judge<br><span class="text-slate-300 font-mono">gemini-1.5-pro</span>
+                        </div>
+                    </div>
+                    <button id="runBtn" onclick="initiateOrchestration()" 
+                        class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg flex items-center gap-2">
+                        <i class="fas fa-brain"></i>
+                        Solve with Council
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Viz -->
+        <div id="pipelineViz" class="hidden mb-12">
+            <div class="flex items-center justify-between max-w-2xl mx-auto relative px-4">
+                <div class="absolute h-0.5 bg-slate-800 left-8 right-8 top-1/2 -translate-y-1/2 z-0"></div>
+                <div id="progressLine" class="absolute h-0.5 bg-blue-500 left-8 top-1/2 -translate-y-1/2 z-0 transition-all duration-700 w-0"></div>
+
+                <div id="step1" class="z-10 bg-slate-900 border-2 border-slate-700 w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all">1</div>
+                <div id="step2" class="z-10 bg-slate-900 border-2 border-slate-700 w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all">2</div>
+                <div id="step3" class="z-10 bg-slate-900 border-2 border-slate-700 w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all">3</div>
+            </div>
+            <div class="flex justify-between max-w-2xl mx-auto mt-2 text-[10px] uppercase tracking-widest font-bold text-slate-500 px-2">
+                <span>Blind Solve</span>
+                <span>Expert Debate</span>
+                <span>Final Synthesis</span>
+            </div>
+        </div>
+
+        <!-- Council Grid -->
+        <div id="councilGrid" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 opacity-50 pointer-events-none transition-opacity duration-500">
+            <!-- Logician -->
+            <div class="agent-card glass-panel rounded-2xl overflow-hidden flex flex-col h-[500px]">
+                <div class="bg-blue-500/10 border-b border-blue-500/20 p-4 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center shadow-lg text-white">
+                            <i class="fas fa-square-root-variable"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-blue-400">Logician</h3>
+                            <p class="text-[10px] text-slate-500 uppercase font-semibold">Deductive Reasoner</p>
+                        </div>
+                    </div>
+                    <div id="logicianStatus" class="hidden"><i class="fas fa-circle-notch fa-spin text-blue-500"></i></div>
+                </div>
+                <div id="outA" class="p-5 flex-1 overflow-y-auto text-sm text-slate-300 leading-relaxed font-light scroll-smooth">
+                    <p class="text-slate-600 italic">Waiting...</p>
+                </div>
+            </div>
+
+            <!-- Critic -->
+            <div class="agent-card glass-panel rounded-2xl overflow-hidden flex flex-col h-[500px]">
+                <div class="bg-rose-500/10 border-b border-rose-500/20 p-4 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-rose-500 flex items-center justify-center shadow-lg text-white">
+                            <i class="fas fa-shield-halved"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-rose-400">Critic</h3>
+                            <p class="text-[10px] text-slate-500 uppercase font-semibold">Red Team Analyst</p>
+                        </div>
+                    </div>
+                    <div id="criticStatus" class="hidden"><i class="fas fa-circle-notch fa-spin text-rose-500"></i></div>
+                </div>
+                <div id="outB" class="p-5 flex-1 overflow-y-auto text-sm text-slate-300 leading-relaxed font-light scroll-smooth">
+                    <p class="text-slate-600 italic">Waiting...</p>
+                </div>
+            </div>
+
+            <!-- Lateral Thinker -->
+            <div class="agent-card glass-panel rounded-2xl overflow-hidden flex flex-col h-[500px]">
+                <div class="bg-purple-500/10 border-b border-purple-500/20 p-4 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-purple-500 flex items-center justify-center shadow-lg text-white">
+                            <i class="fas fa-wand-magic-sparkles"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-purple-400">Lateral Thinker</h3>
+                            <p class="text-[10px] text-slate-500 uppercase font-semibold">Creative Engine</p>
+                        </div>
+                    </div>
+                    <div id="lateralStatus" class="hidden"><i class="fas fa-circle-notch fa-spin text-purple-500"></i></div>
+                </div>
+                <div id="outC" class="p-5 flex-1 overflow-y-auto text-sm text-slate-300 leading-relaxed font-light scroll-smooth">
+                    <p class="text-slate-600 italic">Waiting...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Synthesis Section -->
+        <div id="verdictSection" class="hidden opacity-0 transform translate-y-10 transition-all duration-1000 mb-20">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg text-white">
+                    <i class="fas fa-gavel"></i>
+                </div>
+                <h2 class="text-2xl font-bold tracking-tight">Final Verdict</h2>
+            </div>
+            <div class="glass-panel rounded-3xl p-8 md:p-12 relative overflow-hidden shadow-2xl">
+                <div id="verdictOut" class="relative z-10 markdown-content prose prose-invert max-w-none text-slate-200 leading-relaxed"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const apiKey = ""; 
+        const WORKER_MODEL = "gemini-2.0-flash-exp";
+        const JUDGE_MODEL = "gemini-1.5-pro";
+        
+        const AGENTS = {
+            logician: {
+                id: 'outA', status: 'logicianStatus',
+                prompt: "You are a First Principles Logician. Ignore assumptions. Solve the problem by breaking it down into fundamental truths and building up via strict step-by-step deduction."
+            },
+            critic: {
+                id: 'outB', status: 'criticStatus',
+                prompt: "You are a Red Team Critic. Your goal is to find flaws, hallucinations, and edge cases. Attack the premise. Look for where the logic might fail."
+            },
+            lateral: {
+                id: 'outC', status: 'lateralStatus',
+                prompt: "You are a Creative Lateral Thinker. Look for non-obvious connections, analogies, and out-of-the-box solutions that rigid logic might miss."
+            },
+            judge: {
+                id: 'verdictOut', status: null,
+                prompt: "You are the Supreme Judge. Review the original query and the multi-round collaborative debate between the Logician, Critic, and Lateral Thinker. Identify the strongest arguments. Discard hallucinations. Synthesize the final, correct answer. Format with markdown."
+            }
+        };
+
+        async function apiRequest(model, systemInstruction, userQuery) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: { parts: [{ text: systemInstruction }] },
+                generationConfig: { maxOutputTokens: 8192 }
+            };
+
+            for (let i = 0; i < 5; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error?.message || `API Error ${response.status}`);
+                    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) throw new Error("No content generated");
+                    return data.candidates[0].content.parts[0].text;
+                } catch (e) {
+                    if (i === 4) throw e;
+                    await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
+                }
+            }
+        }
+
+        function updateProgress(step) {
+            const line = document.getElementById('progressLine');
+            const stepEl = document.getElementById(`step${step}`);
+            if (stepEl) stepEl.classList.add('border-blue-500', 'text-blue-500', 'bg-blue-500/10');
+            const widths = ['0%', '33%', '66%', '100%'];
+            line.style.width = widths[step];
+        }
+
+        async function initiateOrchestration() {
+            const query = document.getElementById('userQuery').value.trim();
+            if (!query) return;
+
+            const runBtn = document.getElementById('runBtn');
+            const councilGrid = document.getElementById('councilGrid');
+            const verdictSection = document.getElementById('verdictSection');
+            
+            runBtn.disabled = true;
+            runBtn.innerHTML = `<i class="fas fa-sync fa-spin"></i> Invoking Council...`;
+            councilGrid.classList.remove('opacity-50', 'pointer-events-none');
+            document.getElementById('pipelineViz').classList.remove('hidden');
+            verdictSection.classList.add('hidden');
+            
+            ['outA', 'outB', 'outC', 'verdictOut'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = `<div class="flex flex-col gap-2 mt-4">${Array(4).fill('<div class="h-3 bg-slate-800 rounded animate-pulse w-full"></div>').join('')}</div>`;
+            });
+
+            try {
+                // PHASE 1: Blind Solve
+                updateProgress(1);
+                document.getElementById('logicianStatus').classList.remove('hidden');
+                document.getElementById('criticStatus').classList.remove('hidden');
+                document.getElementById('lateralStatus').classList.remove('hidden');
+                
+                const p1Results = await Promise.allSettled([
+                    apiRequest(WORKER_MODEL, AGENTS.logician.prompt, query),
+                    apiRequest(WORKER_MODEL, AGENTS.critic.prompt, query),
+                    apiRequest(WORKER_MODEL, AGENTS.lateral.prompt, query)
+                ]);
+
+                const blindValues = p1Results.map((res, i) => {
+                    const agent = Object.values(AGENTS)[i];
+                    const el = document.getElementById(agent.id);
+                    if (res.status === 'fulfilled') {
+                        el.innerHTML = `<div class="bg-blue-500/10 border border-blue-500/20 rounded p-2 mb-4 text-[10px] font-bold text-blue-400 uppercase tracking-widest">Phase 1: Blind Solve</div>` + res.value;
+                        return res.value;
+                    }
+                    return "Error in blind solve";
+                });
+
+                // PHASE 2: Debate
+                updateProgress(2);
+                const workspace = `PREVIOUS PERSPECTIVES:\n\n1. LOGICIAN: ${blindValues[0]}\n\n2. CRITIC: ${blindValues[1]}\n\n3. LATERAL THINKER: ${blindValues[2]}`;
+                const debatePrompt = `Review the perspectives of the other agents. Critique their logic, defend your position, or update your answer if they provided a better argument. Stay in persona.\n\nORIGINAL QUERY: ${query}`;
+
+                const p2Results = await Promise.allSettled([
+                    apiRequest(WORKER_MODEL, AGENTS.logician.prompt, debatePrompt),
+                    apiRequest(WORKER_MODEL, AGENTS.critic.prompt, debatePrompt),
+                    apiRequest(WORKER_MODEL, AGENTS.lateral.prompt, debatePrompt)
+                ]);
+
+                document.getElementById('logicianStatus').classList.add('hidden');
+                document.getElementById('bridgeStatus')?.classList.add('hidden'); // Legacy ID check
+                document.getElementById('criticStatus').classList.add('hidden');
+                document.getElementById('lateralStatus').classList.add('hidden');
+
+                const debateValues = p2Results.map((res, i) => {
+                    const agent = Object.values(AGENTS)[i];
+                    const el = document.getElementById(agent.id);
+                    if (res.status === 'fulfilled') {
+                        el.innerHTML = `<div class="bg-amber-500/10 border border-amber-500/20 rounded p-2 mb-4 text-[10px] font-bold text-amber-400 uppercase tracking-widest">Phase 2: Debate Round</div>` + res.value;
+                        return res.value;
+                    }
+                    return "Error in debate round";
+                });
+
+                // PHASE 3: Synthesis
+                updateProgress(3);
+                const synthPrompt = `ORIGINAL QUERY: ${query}\n\nDEBATE TRANSCRIPT:\nLOGICIAN: ${debateValues[0]}\n\nCRITIC: ${debateValues[1]}\n\nLATERAL THINKER: ${debateValues[2]}`;
+                const verdict = await apiRequest(JUDGE_MODEL, AGENTS.judge.prompt, synthPrompt);
+
+                const formatted = verdict
+                    .replace(/^# (.*$)/gim, '<h1 class="text-blue-400 font-bold text-xl mb-4">$1</h1>')
+                    .replace(/^## (.*$)/gim, '<h2 class="text-blue-300 font-bold text-lg mb-2 mt-4">$1</h2>')
+                    .replace(/^\* (.*$)/gim, '<li class="ml-4 mb-1 text-slate-300 flex items-start"><span class="text-blue-500 mr-2">•</span><span>$1</span></li>')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-bold">$1</strong>')
+                    .replace(/\n\n/g, '<div class="mb-4"></div>')
+                    .replace(/\n/g, '<br>');
+
+                document.getElementById('verdictOut').innerHTML = formatted;
+                verdictSection.classList.remove('hidden');
+                setTimeout(() => {
+                    verdictSection.classList.remove('opacity-0', 'translate-y-10');
+                    verdictSection.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+
+            } catch (err) {
+                console.error(err);
+                alert("Critical failure: " + err.message);
+            } finally {
+                runBtn.disabled = false;
+                runBtn.innerHTML = `<i class="fas fa-brain"></i> Solve with Council`;
+            }
+        }
+    </script>
+</body>
+</html>
